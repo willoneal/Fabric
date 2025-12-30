@@ -88,7 +88,7 @@ Take a deliberate, step-by-step approach to analyzing the data before creating t
 
 # OUTPUT INSTRUCTIONS
 
-- Output **only human-readable Markdown** and a downloadable PDF. 
+- Output **only human-readable Markdown** and a downloadable Word Document. 
 - Aim the language at a **business owner / primary contact**, not a technician.
 - All tables should be formatted like an excel spreadsheet, not markdown. The rows and columns should be sized according to the data contained in them.
 - Use clear headings and subsections with this structure:
