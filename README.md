@@ -63,6 +63,9 @@ Fabric organizes prompts by real-world task, allowing people to create, collect,
 
 ## Updates
 
+For a deep dive into Fabric and its internals, read the documentation in the [docs folder](https://github.com/danielmiessler/Fabric/tree/main/docs). There is
+also the extremely useful and regularly updated [DeepWiki](https://deepwiki.com/danielmiessler/Fabric) for Fabric.
+
 <details>
 <summary>Click to view recent updates</summary>
 
@@ -74,6 +77,11 @@ Below are the **new features and capabilities** we've added (newest first):
 
 ### Recent Major Features
 
+- [v1.4.437](https://github.com/danielmiessler/fabric/releases/tag/v1.4.437) (March 16, 2026) — **OpenAI Codex PLugin**: Fabric now supports using OpenAI Codex (with your OpenAI subscription) as a backend!
+- [v1.4.417](https://github.com/danielmiessler/fabric/releases/tag/v1.4.417) (Feb 21, 2026) — **Azure AI Gateway Plugin**: Added Azure AI Gateway plugin supporting multiple backends (AWS Bedrock, Azure OpenAI, Google Vertex AI) through a unified Azure APIM Gateway with shared subscription key authentication.
+- [v1.4.416](https://github.com/danielmiessler/fabric/releases/tag/v1.4.416) (Feb 21, 2026) — **Azure Entra ID Authentication**: Added Azure Entra ID authentication plugin with shared Azure utilities, Entra ID/MSAL support, and extracted common Azure logic into a reusable `azurecommon` package.
+- [v1.4.380](https://github.com/danielmiessler/fabric/releases/tag/v1.4.380) (Jan 15, 2026) — **Microsoft 365 Copilot Integration**: Added support for corporate Microsoft 365 Copilot, enabling enterprise users to leverage AI grounded in their organization's Microsoft 365 data (emails, documents, meetings.
+- [v1.4.378](https://github.com/danielmiessler/fabric/releases/tag/v1.4.378) (Jan 14, 2026) — **Digital Ocean GenAI Support**: Added support for Digital Ocean GenAI, along with a [guide for how to use it](./docs/DigitalOcean-Agents-Setup.md).
 - [v1.4.356](https://github.com/danielmiessler/fabric/releases/tag/v1.4.356) (Dec 22, 2025) — **Complete Internationalization**: Full i18n support for setup prompts across all 10 languages with intelligent environment variable handling—making Fabric truly accessible worldwide while maintaining configuration consistency.
 - [v1.4.350](https://github.com/danielmiessler/fabric/releases/tag/v1.4.350) (Dec 18, 2025) — **Interactive API Documentation**: Adds Swagger/OpenAPI UI at `/swagger/index.html` with comprehensive REST API documentation, enhanced developer guides, and improved endpoint discoverability for easier integration.
 - [v1.4.338](https://github.com/danielmiessler/fabric/releases/tag/v1.4.338) (Dec 4, 2025) — Add Abacus vendor support for Chat-LLM
@@ -90,39 +98,6 @@ Below are the **new features and capabilities** we've added (newest first):
 - [v1.4.303](https://github.com/danielmiessler/fabric/releases/tag/v1.4.303) (Aug 29, 2025) — **New Binary Releases**: Linux ARM and Windows ARM targets. You can run Fabric on the Raspberry PI and on your Windows Surface!
 - [v1.4.294](https://github.com/danielmiessler/fabric/releases/tag/v1.4.294) (Aug 20, 2025) — **Venice AI Support**: Added the Venice AI provider. Venice is a Privacy-First, Open-Source AI provider. See their ["About Venice"](https://docs.venice.ai/overview/about-venice) page for details.
 - [v1.4.291](https://github.com/danielmiessler/fabric/releases/tag/v1.4.291) (Aug 18, 2025) — **Speech To Text**: Add OpenAI speech-to-text support with `--transcribe-file`, `--transcribe-model`, and `--split-media-file` flags.
-- [v1.4.287](https://github.com/danielmiessler/fabric/releases/tag/v1.4.287) (Aug 16, 2025) — **AI Reasoning**: Add Thinking to Gemini models and introduce `readme_updates` python script
-- [v1.4.286](https://github.com/danielmiessler/fabric/releases/tag/v1.4.286) (Aug 14, 2025) — **AI Reasoning**: Introduce Thinking Config Across Anthropic and OpenAI Providers
-- [v1.4.285](https://github.com/danielmiessler/fabric/releases/tag/v1.4.285) (Aug 13, 2025) — **Extended Context**: Enable One Million Token Context Beta Feature for Sonnet-4
-- [v1.4.284](https://github.com/danielmiessler/fabric/releases/tag/v1.4.284) (Aug 12, 2025) — **Easy Shell Completions Setup**: Introduce One-Liner Curl Install for Completions
-- [v1.4.283](https://github.com/danielmiessler/fabric/releases/tag/v1.4.283) (Aug 12, 2025) — **Model Management**: Add Vendor Selection Support for Models
-- [v1.4.282](https://github.com/danielmiessler/fabric/releases/tag/v1.4.282) (Aug 11, 2025) — **Enhanced Shell Completions**: Enhanced Shell Completions for Fabric CLI Binaries
-- [v1.4.281](https://github.com/danielmiessler/fabric/releases/tag/v1.4.281) (Aug 11, 2025) — **Gemini Search Tool**: Add Web Search Tool Support for Gemini Models
-- [v1.4.278](https://github.com/danielmiessler/fabric/releases/tag/v1.4.278) (Aug 9, 2025) — **Enhance YouTube Transcripts**: Enhance YouTube Support with Custom yt-dlp Arguments
-- [v1.4.277](https://github.com/danielmiessler/fabric/releases/tag/v1.4.277) (Aug 8, 2025) — **Desktop Notifications**: Add cross-platform desktop notifications to Fabric CLI
-- [v1.4.274](https://github.com/danielmiessler/fabric/releases/tag/v1.4.274) (Aug 7, 2025) — **Claude 4.1 Added**: Add Support for Claude Opus 4.1 Model
-- [v1.4.271](https://github.com/danielmiessler/fabric/releases/tag/v1.4.271) (Jul 28, 2025) — **AI Summarized Release Notes**: Enable AI summary updates for GitHub releases
-- [v1.4.268](https://github.com/danielmiessler/fabric/releases/tag/v1.4.268) (Jul 26, 2025) — **Gemini TTS Voice Selection**: add Gemini TTS voice selection and listing functionality
-- [v1.4.267](https://github.com/danielmiessler/fabric/releases/tag/v1.4.267) (Jul 26, 2025) — **Text-to-Speech**: Update Gemini Plugin to New SDK with TTS Support
-- [v1.4.258](https://github.com/danielmiessler/fabric/releases/tag/v1.4.258) (Jul 17, 2025) — **Onboarding Improved**: Add startup check to initialize config and .env file automatically
-- [v1.4.257](https://github.com/danielmiessler/fabric/releases/tag/v1.4.257) (Jul 17, 2025) — **OpenAI Routing Control**: Introduce CLI Flag to Disable OpenAI Responses API
-- [v1.4.252](https://github.com/danielmiessler/fabric/releases/tag/v1.4.252) (Jul 16, 2025) — **Hide Thinking Block**: Optional Hiding of Model Thinking Process with Configurable Tags
-- [v1.4.246](https://github.com/danielmiessler/fabric/releases/tag/v1.4.246) (Jul 14, 2025) — **Automatic ChangeLog Updates**: Add AI-powered changelog generation with high-performance Go tool and comprehensive caching
-- [v1.4.245](https://github.com/danielmiessler/fabric/releases/tag/v1.4.245) (Jul 11, 2025) — **Together AI**: Together AI Support with OpenAI Fallback Mechanism Added
-- [v1.4.232](https://github.com/danielmiessler/fabric/releases/tag/v1.4.232) (Jul 6, 2025) — **Add Custom**: Add Custom Patterns Directory Support
-- [v1.4.231](https://github.com/danielmiessler/fabric/releases/tag/v1.4.231) (Jul 5, 2025) — **OAuth Auto-Auth**: OAuth Authentication Support for Anthropic (Use your Max Subscription)
-- [v1.4.230](https://github.com/danielmiessler/fabric/releases/tag/v1.4.230) (Jul 5, 2025) — **Model Management**: Add advanced image generation parameters for OpenAI models with four new CLI flags
-- [v1.4.227](https://github.com/danielmiessler/fabric/releases/tag/v1.4.227) (Jul 4, 2025) — **Add Image**: Add Image Generation Support to Fabric
-- [v1.4.226](https://github.com/danielmiessler/fabric/releases/tag/v1.4.226) (Jul 4, 2025) — **Web Search**: OpenAI Plugin Now Supports Web Search Functionality
-- [v1.4.225](https://github.com/danielmiessler/fabric/releases/tag/v1.4.225) (Jul 4, 2025) — **Web Search**: Runtime Web Search Control via Command-Line `--search` Flag
-- [v1.4.224](https://github.com/danielmiessler/fabric/releases/tag/v1.4.224) (Jul 1, 2025) — **Add code_review**: Add code_review pattern and updates in Pattern_Descriptions
-- [v1.4.222](https://github.com/danielmiessler/fabric/releases/tag/v1.4.222) (Jul 1, 2025) — **OpenAI Plugin**: OpenAI Plugin Migrates to New Responses API
-- [v1.4.218](https://github.com/danielmiessler/fabric/releases/tag/v1.4.218) (Jun 27, 2025) — **Model Management**: Add Support for OpenAI Search and Research Model Variants
-- [v1.4.217](https://github.com/danielmiessler/fabric/releases/tag/v1.4.217) (Jun 26, 2025) — **New YouTube**: New YouTube Transcript Endpoint Added to REST API
-- [v1.4.212](https://github.com/danielmiessler/fabric/releases/tag/v1.4.212) (Jun 23, 2025) — **Add Langdock**: Add Langdock AI and enhance generic OpenAI compatible support
-- [v1.4.211](https://github.com/danielmiessler/fabric/releases/tag/v1.4.211) (Jun 19, 2025) — **REST API**: REST API and Web UI Now Support Dynamic Pattern Variables
-- [v1.4.210](https://github.com/danielmiessler/fabric/releases/tag/v1.4.210) (Jun 18, 2025) — **Add Citations**: Add Citation Support to Perplexity Response
-- [v1.4.208](https://github.com/danielmiessler/fabric/releases/tag/v1.4.208) (Jun 17, 2025) — **Add Perplexity**: Add Perplexity AI Provider with Token Limits Support
-- [v1.4.203](https://github.com/danielmiessler/fabric/releases/tag/v1.4.203) (Jun 14, 2025) — **Add Amazon Bedrock**: Add support for Amazon Bedrock
 
 These features represent our commitment to making Fabric the most powerful and flexible AI augmentation framework available!
 
@@ -160,6 +135,7 @@ Keep in mind that many of these were recorded when Fabric was Python-based, so r
     - [Docker](#docker)
     - [Environment Variables](#environment-variables)
     - [Setup](#setup)
+    - [Supported AI Providers](#supported-ai-providers)
     - [Per-Pattern Model Mapping](#per-pattern-model-mapping)
     - [Add aliases for all patterns](#add-aliases-for-all-patterns)
       - [Save your files in markdown using aliases](#save-your-files-in-markdown-using-aliases)
@@ -172,12 +148,15 @@ Keep in mind that many of these were recorded when Fabric was Python-based, so r
       - [Fish Completion](#fish-completion)
   - [Usage](#usage)
     - [Debug Levels](#debug-levels)
+    - [Dry Run Mode](#dry-run-mode)
     - [Extensions](#extensions)
   - [REST API Server](#rest-api-server)
+    - [Ollama Compatibility Mode](#ollama-compatibility-mode)
   - [Our approach to prompting](#our-approach-to-prompting)
   - [Examples](#examples)
   - [Just use the Patterns](#just-use-the-patterns)
     - [Prompt Strategies](#prompt-strategies)
+      - [Available Strategies](#available-strategies)
   - [Custom Patterns](#custom-patterns)
     - [Setting Up Custom Patterns](#setting-up-custom-patterns)
     - [Using Custom Patterns](#using-custom-patterns)
@@ -185,12 +164,14 @@ Keep in mind that many of these were recorded when Fabric was Python-based, so r
   - [Helper Apps](#helper-apps)
     - [`to_pdf`](#to_pdf)
     - [`to_pdf` Installation](#to_pdf-installation)
-    - [`code_helper`](#code_helper)
+    - [`code2context`](#code2context)
+    - [`generate_changelog`](#generate_changelog)
   - [pbpaste](#pbpaste)
   - [Web Interface (Fabric Web App)](#web-interface-fabric-web-app)
   - [Meta](#meta)
     - [Primary contributors](#primary-contributors)
     - [Contributors](#contributors)
+  - [💜 Support This Project](#-support-this-project)
 
 <br />
 
@@ -348,6 +329,46 @@ fabric --setup
 ```
 
 If everything works you are good to go.
+
+### Supported AI Providers
+
+Fabric supports a wide range of AI providers:
+
+**Native Integrations:**
+
+- OpenAI
+- OpenAI Codex (ChatGPT/Codex subscription OAuth via private backend)
+- Anthropic (Claude)
+- Google Gemini
+- Ollama (local models)
+- Azure OpenAI
+- Amazon Bedrock
+- Vertex AI
+- LM Studio
+- Perplexity
+
+**OpenAI-Compatible Providers:**
+
+- Abacus
+- AIML
+- Cerebras
+- DeepSeek
+- DigitalOcean
+- GitHub Models
+- GrokAI
+- Groq
+- Langdock
+- LiteLLM
+- MiniMax
+- Mistral
+- Novita AI
+- OpenRouter
+- SiliconCloud
+- Together
+- Venice AI
+- Z AI
+
+Run `fabric --setup` to configure your preferred provider(s), or use `fabric --listvendors` to see all available vendors.
 
 ### Per-Pattern Model Mapping
 
@@ -705,6 +726,7 @@ Application Options:
       --yt-dlp-args=                Additional arguments to pass to yt-dlp (e.g. '--cookies-from-browser brave')
       --thinking=                   Set reasoning/thinking level (e.g., off, low, medium, high, or
                                     numeric tokens for Anthropic or Google Gemini)
+      --show-metadata               Print metadata (input/output tokens) to stderr
       --debug=                     Set debug level (0: off, 1: basic, 2: detailed, 3: trace)
 Help Options:
   -h, --help                        Show this help message
@@ -718,6 +740,16 @@ Use the `--debug` flag to control runtime logging:
 - `1`: basic debug info
 - `2`: detailed debugging
 - `3`: trace level
+
+### Dry Run Mode
+
+Use `--dry-run` to preview what would be sent to the AI model without making an API call:
+
+```bash
+echo "test input" | fabric --dry-run -p summarize
+```
+
+This is useful for debugging patterns, checking prompt construction, and verifying input formatting before using API credits.
 
 ### Extensions
 
@@ -743,6 +775,22 @@ The server provides endpoints for:
 - Configuration management
 
 For complete endpoint documentation, authentication setup, and usage examples, see [REST API Documentation](docs/rest-api.md).
+
+### Ollama Compatibility Mode
+
+Fabric can serve as a drop-in replacement for Ollama by exposing Ollama-compatible API endpoints. Start the server with:
+
+```bash
+fabric --serve --serveOllama
+```
+
+This enables the following Ollama-compatible endpoints:
+
+- `GET /api/tags` - List available patterns as models
+- `POST /api/chat` - Chat completions
+- `GET /api/version` - Server version
+
+Applications configured to use the Ollama API can point to your Fabric server instead, allowing you to use any of Fabric's supported AI providers through the Ollama interface. Patterns appear as models (e.g., `summarize:latest`).
 
 ## Our approach to prompting
 
@@ -824,6 +872,34 @@ LLM in the chat session.
 
 Use `fabric -S` and select the option to install the strategies in your `~/.config/fabric` directory.
 
+#### Available Strategies
+
+Fabric includes several prompt strategies:
+
+- `cot` - Chain-of-Thought: Step-by-step reasoning
+- `cod` - Chain-of-Draft: Iterative drafting with minimal notes (5 words max per step)
+- `tot` - Tree-of-Thought: Generate multiple reasoning paths and select the best one
+- `aot` - Atom-of-Thought: Break problems into smallest independent atomic sub-problems
+- `ltm` - Least-to-Most: Solve problems from easiest to hardest sub-problems
+- `self-consistent` - Self-Consistency: Multiple reasoning paths with consensus
+- `self-refine` - Self-Refinement: Answer, critique, and refine
+- `reflexion` - Reflexion: Answer, critique briefly, and provide refined answer
+- `standard` - Standard: Direct answer without explanation
+
+Use the `--strategy` flag to apply a strategy:
+
+```bash
+echo "Analyze this code" | fabric --strategy cot -p analyze_code
+```
+
+List all available strategies with:
+
+```bash
+fabric --liststrategies
+```
+
+Strategies are stored as JSON files in `~/.config/fabric/strategies/`. See the default strategies for the format specification.
+
 ## Custom Patterns
 
 You may want to use Fabric to create your own custom Patterns—but not share them with others. No problem!
@@ -903,9 +979,9 @@ go install github.com/danielmiessler/fabric/cmd/to_pdf@latest
 
 Make sure you have a LaTeX distribution (like TeX Live or MiKTeX) installed on your system, as `to_pdf` requires `pdflatex` to be available in your system's PATH.
 
-### `code_helper`
+### `code2context`
 
-`code_helper` is used in conjunction with the `create_coding_feature` pattern.
+`code2context` is used in conjunction with the `create_coding_feature` pattern.
 It generates a `json` representation of a directory of code that can be fed into an AI model
 with instructions to create a new feature or edit the code in a specified way.
 
@@ -914,8 +990,26 @@ See [the Create Coding Feature Pattern README](./data/patterns/create_coding_fea
 Install it first using:
 
 ```bash
-go install github.com/danielmiessler/fabric/cmd/code_helper@latest
+go install github.com/danielmiessler/fabric/cmd/code2context@latest
 ```
+
+### `generate_changelog`
+
+`generate_changelog` generates changelogs from git commit history and GitHub pull requests. It walks through your repository's git history, extracts PR information, and produces well-formatted markdown changelogs.
+
+```bash
+generate_changelog --help
+```
+
+Features include SQLite caching for fast incremental updates, GitHub GraphQL API integration for efficient PR fetching, and optional AI-enhanced summaries using Fabric.
+
+Install it using:
+
+```bash
+go install github.com/danielmiessler/fabric/cmd/generate_changelog@latest
+```
+
+See the [generate_changelog README](./cmd/generate_changelog/README.md) for detailed usage and options.
 
 ## pbpaste
 
@@ -976,3 +1070,13 @@ Made with [contrib.rocks](https://contrib.rocks).
 `fabric` was created by <a href="https://danielmiessler.com/subscribe" target="_blank">Daniel Miessler</a> in January of 2024.
 <br /><br />
 <a href="https://twitter.com/intent/user?screen_name=danielmiessler">![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/danielmiessler)</a>
+
+## 💜 Support This Project
+
+<div align="center">
+
+<img src="https://img.shields.io/badge/Sponsor-❤️-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="Sponsor">
+
+**I spend hundreds of hours a year on open source. If you'd like to help support this project, you can [sponsor me here](https://github.com/sponsors/danielmiessler). 🙏🏼**
+
+</div>

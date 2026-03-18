@@ -3,6 +3,7 @@ package ollama
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/danielmiessler/fabric/internal/chat"
 	"github.com/danielmiessler/fabric/internal/domain"
+	"github.com/danielmiessler/fabric/internal/i18n"
 	debuglog "github.com/danielmiessler/fabric/internal/log"
 	"github.com/danielmiessler/fabric/internal/plugins"
 	ollamaapi "github.com/ollama/ollama/api"
@@ -24,19 +26,15 @@ func NewClient() (ret *Client) {
 	vendorName := "Ollama"
 	ret = &Client{}
 
-	ret.PluginBase = &plugins.PluginBase{
-		Name:            vendorName,
-		EnvNamePrefix:   plugins.BuildEnvVariablePrefix(vendorName),
-		ConfigureCustom: ret.configure,
-	}
+	ret.PluginBase = plugins.NewVendorPluginBase(vendorName, ret.configure)
 
 	ret.ApiUrl = ret.AddSetupQuestionCustom("API URL", true,
-		"Enter your Ollama URL (as a reminder, it is usually http://localhost:11434')")
+		fmt.Sprintf(i18n.T("lmstudio_api_url_question"), vendorName, defaultBaseUrl))
 	ret.ApiUrl.Value = defaultBaseUrl
 	ret.ApiKey = ret.PluginBase.AddSetupQuestion("API key", false)
 	ret.ApiKey.Value = ""
 	ret.ApiHttpTimeout = ret.AddSetupQuestionCustom("HTTP Timeout", true,
-		"Specify HTTP timeout duration for Ollama requests (e.g. 30s, 5m, 1h)")
+		i18n.T("ollama_http_timeout_question"))
 	ret.ApiHttpTimeout.Value = "20m"
 
 	return
@@ -71,7 +69,7 @@ func (o *Client) IsConfigured() bool {
 
 func (o *Client) configure() (err error) {
 	if o.apiUrl, err = url.Parse(o.ApiUrl.Value); err != nil {
-		fmt.Printf("cannot parse URL: %s: %v\n", o.ApiUrl.Value, err)
+		fmt.Printf("%s\n", fmt.Sprintf(i18n.T("ollama_cannot_parse_url"), o.ApiUrl.Value, err))
 		return
 	}
 
@@ -82,7 +80,7 @@ func (o *Client) configure() (err error) {
 		if err == nil && o.ApiHttpTimeout.Value != "" {
 			timeout = parsed
 		} else if o.ApiHttpTimeout.Value != "" {
-			fmt.Printf("Invalid HTTP timeout format (%q), using default (20m): %v\n", o.ApiHttpTimeout.Value, err)
+			fmt.Printf("%s\n", fmt.Sprintf(i18n.T("ollama_invalid_http_timeout_using_default"), o.ApiHttpTimeout.Value, err))
 		}
 	}
 
@@ -106,7 +104,7 @@ func (o *Client) ListModels() (ret []string, err error) {
 	return
 }
 
-func (o *Client) SendStream(msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan string) (err error) {
+func (o *Client) SendStream(msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan domain.StreamUpdate) (err error) {
 	ctx := context.Background()
 
 	var req ollamaapi.ChatRequest
@@ -115,7 +113,21 @@ func (o *Client) SendStream(msgs []*chat.ChatCompletionMessage, opts *domain.Cha
 	}
 
 	respFunc := func(resp ollamaapi.ChatResponse) (streamErr error) {
-		channel <- resp.Message.Content
+		channel <- domain.StreamUpdate{
+			Type:    domain.StreamTypeContent,
+			Content: resp.Message.Content,
+		}
+
+		if resp.Done {
+			channel <- domain.StreamUpdate{
+				Type: domain.StreamTypeUsage,
+				Usage: &domain.UsageMetadata{
+					InputTokens:  resp.PromptEvalCount,
+					OutputTokens: resp.EvalCount,
+					TotalTokens:  resp.PromptEvalCount + resp.EvalCount,
+				},
+			}
+		}
 		return
 	}
 
@@ -142,12 +154,20 @@ func (o *Client) Send(ctx context.Context, msgs []*chat.ChatCompletionMessage, o
 	}
 
 	if err = o.client.Chat(ctx, &req, respFunc); err != nil {
-		debuglog.Debug(debuglog.Basic, "Ollama chat request failed: %v\n", err)
+		debuglog.Debug(debuglog.Basic, "%s\n", fmt.Sprintf(i18n.T("ollama_chat_request_failed"), err))
 	}
 	return
 }
 
 func (o *Client) createChatRequest(ctx context.Context, msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions) (ret ollamaapi.ChatRequest, err error) {
+	// Some models (e.g. qwen3-coder, deepseek) return empty responses when
+	// the only message has role=system. Convert to role=user in that case.
+	if len(msgs) == 1 && msgs[0].Role == chat.ChatMessageRoleSystem {
+		copy := *msgs[0]
+		copy.Role = chat.ChatMessageRoleUser
+		msgs = []*chat.ChatCompletionMessage{&copy}
+	}
+
 	messages := make([]ollamaapi.Message, len(msgs))
 	for i, message := range msgs {
 		if messages[i], err = o.convertMessage(ctx, message); err != nil {
@@ -171,6 +191,15 @@ func (o *Client) createChatRequest(ctx context.Context, msgs []*chat.ChatComplet
 		Messages: messages,
 		Options:  options,
 	}
+
+	// Map Fabric's ThinkingLevel to Ollama's Think field
+	switch opts.Thinking {
+	case domain.ThinkingOff:
+		ret.Think = &ollamaapi.ThinkValue{Value: false}
+	case domain.ThinkingLow, domain.ThinkingMedium, domain.ThinkingHigh:
+		ret.Think = &ollamaapi.ThinkValue{Value: true}
+	}
+
 	return
 }
 
@@ -215,11 +244,11 @@ func (o *Client) loadImageBytes(ctx context.Context, imageURL string) (ret []byt
 	if strings.HasPrefix(imageURL, "data:") {
 		parts := strings.SplitN(imageURL, ",", 2)
 		if len(parts) != 2 {
-			err = fmt.Errorf("invalid data URL format")
+			err = errors.New(i18n.T("ollama_invalid_data_url_format"))
 			return
 		}
 		if ret, err = base64.StdEncoding.DecodeString(parts[1]); err != nil {
-			err = fmt.Errorf("failed to decode data URL: %w", err)
+			err = fmt.Errorf("%s", fmt.Sprintf(i18n.T("ollama_failed_decode_data_url"), err))
 		}
 		return
 	}
@@ -237,7 +266,7 @@ func (o *Client) loadImageBytes(ctx context.Context, imageURL string) (ret []byt
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		err = fmt.Errorf("failed to fetch image %s: %s", imageURL, resp.Status)
+		err = fmt.Errorf("%s", fmt.Sprintf(i18n.T("ollama_failed_fetch_image"), imageURL, resp.Status))
 		return
 	}
 

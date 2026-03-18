@@ -59,6 +59,7 @@ type Flags struct {
 	YouTubeComments                 bool                 `long:"comments" description:"Grab comments from YouTube video and send to chat"`
 	YouTubeMetadata                 bool                 `long:"metadata" description:"Output video metadata"`
 	YtDlpArgs                       string               `long:"yt-dlp-args" yaml:"ytDlpArgs" description:"Additional arguments to pass to yt-dlp (e.g. '--cookies-from-browser brave')"`
+	Spotify                         string               `long:"spotify" description:"Spotify podcast or episode URL to grab metadata from and send to chat"`
 	Language                        string               `short:"g" long:"language" description:"Specify the Language Code for the chat, e.g. -g=en -g=zh" default:""`
 	ScrapeURL                       string               `short:"u" long:"scrape_url" description:"Scrape website URL to markdown using Jina AI"`
 	ScrapeQuestion                  string               `short:"q" long:"scrape_question" description:"Search question using Jina AI"`
@@ -104,7 +105,8 @@ type Flags struct {
 	Notification                    bool                 `long:"notification" yaml:"notification" description:"Send desktop notification when command completes"`
 	NotificationCommand             string               `long:"notification-command" yaml:"notificationCommand" description:"Custom command to run for notifications (overrides built-in notifications)"`
 	Thinking                        domain.ThinkingLevel `long:"thinking" yaml:"thinking" description:"Set reasoning/thinking level (e.g., off, low, medium, high, or numeric tokens for Anthropic or Google Gemini)"`
-	Debug                           int                  `long:"debug" description:"Set debug level (0=off, 1=basic, 2=detailed, 3=trace)" default:"0"`
+	ShowMetadata                    bool                 `long:"show-metadata" description:"Print metadata to stderr"`
+	Debug                           int                  `long:"debug" description:"Set debug level (0=off, 1=basic, 2=detailed, 3=trace, 4=wire)" default:"0"`
 }
 
 // Init Initialize flags. returns a Flags struct and an error
@@ -159,6 +161,16 @@ func Init() (ret *Flags, err error) {
 		}
 		return
 	}
+
+	if ret.Pattern == "" {
+		execName := filepath.Base(os.Args[0])
+		execName = strings.TrimSuffix(execName, filepath.Ext(execName))
+		if execName != "fabric" && execName != "main" && execName != "cmd" && execName != "" {
+			ret.Pattern = execName
+			usedFlags["pattern"] = true
+		}
+	}
+
 	debuglog.SetLevel(debuglog.LevelFromInt(ret.Debug))
 
 	// Check to see if a ~/.config/fabric/config.yaml config file exists (only when user didn't specify a config)
@@ -211,7 +223,7 @@ func Init() (ret *Flags, err error) {
 
 	// Append positional arguments to the message (custom message)
 	if len(args) > 0 {
-		ret.Message = AppendMessage(ret.Message, args[len(args)-1])
+		ret.Message = AppendMessage(ret.Message, strings.Join(args, " "))
 	}
 
 	if pipedToStdin {
@@ -361,7 +373,7 @@ func validateImageParameters(imagePath, size, quality, background string, compre
 	if imagePath == "" {
 		// Check if any image parameters are specified without --image-file
 		if size != "" || quality != "" || background != "" || compression != 0 {
-			return fmt.Errorf("%s", i18n.T("image_parameters_require_image_file"))
+			return errors.New(i18n.T("image_parameters_require_image_file"))
 		}
 		return nil
 	}
@@ -459,6 +471,7 @@ func (o *Flags) BuildChatOptions() (ret *domain.ChatOptions, err error) {
 		Voice:               o.Voice,
 		Notification:        o.Notification || o.NotificationCommand != "",
 		NotificationCommand: o.NotificationCommand,
+		ShowMetadata:        o.ShowMetadata,
 	}
 	return
 }

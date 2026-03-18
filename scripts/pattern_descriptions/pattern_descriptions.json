@@ -1672,15 +1672,6 @@
       ]
     },
     {
-      "patternName": "extract_wisdom_short",
-      "description": "Extract condensed  insightful ideas and recommendations focusing on life wisdom.",
-      "tags": [
-        "EXTRACT",
-        "WISDOM",
-        "SELF"
-      ]
-    },
-    {
       "patternName": "analyze_bill",
       "description": "Analyze a legislative bill and implications.",
       "tags": [
@@ -1931,6 +1922,166 @@
       "tags": [
         "SUMMARIZE",
         "BUSINESS"
+      ]
+    },
+    {
+      "patternName": "greybeard_secure_prompt_engineer",
+      "description": "Creates secure, production-grade system prompts with NASA-style mission assurance. Outputs include hardened prompts, developer prompts, prompt-injection test suites, and evaluation rubrics. Enforces instruction hierarchy, resists adversarial inputs, and maintains auditability.",
+      "tags": [
+        "security",
+        "prompt-engineering",
+        "system-prompts",
+        "prompt-injection",
+        "llm-security",
+        "hardening"
+      ]
+    },
+    {
+      "patternName": "extract_wisdom_with_attribution",
+      "description": "Extract insightful ideas and recommendations with speaker attribution for quotes.",
+      "tags": [
+        "EXTRACT",
+        "WISDOM",
+        "SELF"
+      ]
+    },
+    {
+      "patternName": "analyze_discord_structure",
+      "description": "Analyze Discord server structures for organizational issues, permissions, and optimization.",
+      "tags": [
+        "ANALYSIS",
+        "BUSINESS"
+      ]
+    },
+    {
+      "patternName": "create_design_system",
+      "description": "Create comprehensive CSS design systems with tokens, typography, spacing, and components.",
+      "tags": [
+        "DEVELOPMENT",
+        "VISUALIZE",
+        "WRITING"
+      ]
+    },
+    {
+      "patternName": "create_golden_rules",
+      "description": "Extract enforceable rules from codebases to prevent common mistakes and ensure consistency.",
+      "tags": [
+        "ANALYSIS",
+        "DEVELOPMENT",
+        "EXTRACT"
+      ]
+    },
+    {
+      "patternName": "create_bd_issue",
+      "description": "Transform natural language descriptions into optimal bd create commands for issue tracking.",
+      "tags": [
+        "DEVELOPMENT"
+      ]
+    },
+    {
+      "patternName": "extract_all_quotes",
+      "description": "Extract all inspirational and educational quotes from content including podcasts and essays.",
+      "tags": [
+        "EXTRACT"
+      ]
+    },
+    {
+      "patternName": "extract_bd_ideas",
+      "description": "Extract actionable ideas from content and transform into bd create commands.",
+      "tags": [
+        "EXTRACT",
+        "ANALYSIS",
+        "DEVELOPMENT"
+      ]
+    },
+    {
+      "patternName": "suggest_gt_command",
+      "description": "Suggest optimal Gas Town (GT) commands based on user intent and task description.",
+      "tags": [
+        "DEVELOPMENT",
+        "ANALYSIS"
+      ]
+    },
+    {
+      "patternName": "explain_terms_and_conditions",
+      "description": "Analyze legal agreements translating complex legalese into plain English with red flags.",
+      "tags": [
+        "ANALYSIS",
+        "SELF"
+      ]
+    },
+    {
+      "patternName": "suggest_openclaw_pattern",
+      "description": "Suggest optimal Openclaw CLI commands based on user intent and task description.",
+      "tags": [
+        "DEVELOPMENT",
+        "ANALYSIS"
+      ]
+    },
+    {
+      "patternName": "check_falsifiability",
+      "description": "Evaluate whether claims, definitions, and arguments are falsifiable and can be proven wrong.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "detect_mind_virus",
+      "description": "Detect manipulative belief systems that spread by exploiting cognitive shortcuts while resisting correction.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "extract_ethical_framework",
+      "description": "Extract and analyze the implicit ethical framework embedded in policies, proposals, or any prescriptive text.",
+      "tags": [
+        "ANALYSIS",
+        "EXTRACT",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "ultimate_law_safety",
+      "description": "Evaluate actions and policies against the Ultimate Law framework to identify violations creating unwilling victims.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "audit_consent",
+      "description": "Evaluate whether consent is genuine or manufactured by analyzing power asymmetries, information gaps, and coercion.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "audit_transparency",
+      "description": "Audit decisions and systems for explainability, assessing whether opacity is justified or conceals harm.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "detect_silent_victims",
+      "description": "Identify parties harmed by actions or systems who cannot speak up due to power, awareness, or temporal gaps.",
+      "tags": [
+        "ANALYSIS",
+        "CR THINKING"
+      ]
+    },
+    {
+      "patternName": "create_slides",
+      "description": "Transform content into visual Reveal.js HTML slideshows with minimal text and rich SVG illustrations.",
+      "tags": [
+        "VISUALIZE",
+        "WRITING",
+        "CONVERSION"
       ]
     }
   ]

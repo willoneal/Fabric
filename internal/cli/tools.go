@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/danielmiessler/fabric/internal/core"
@@ -12,7 +13,7 @@ import (
 func handleToolProcessing(currentFlags *Flags, registry *core.PluginRegistry) (messageTools string, err error) {
 	if currentFlags.YouTube != "" {
 		if !registry.YouTube.IsConfigured() {
-			err = fmt.Errorf("%s", i18n.T("youtube_not_configured"))
+			err = errors.New(i18n.T("youtube_not_configured"))
 			return
 		}
 
@@ -59,7 +60,7 @@ func handleToolProcessing(currentFlags *Flags, registry *core.PluginRegistry) (m
 
 	if currentFlags.ScrapeURL != "" || currentFlags.ScrapeQuestion != "" {
 		if !registry.Jina.IsConfigured() {
-			err = fmt.Errorf("%s", i18n.T("scraping_not_configured"))
+			err = errors.New(i18n.T("scraping_not_configured"))
 			return
 		}
 		// Check if the scrape_url flag is set and call ScrapeURL
@@ -80,6 +81,27 @@ func handleToolProcessing(currentFlags *Flags, registry *core.PluginRegistry) (m
 
 			messageTools = AppendMessage(messageTools, website)
 		}
+
+		if !currentFlags.IsChatRequest() {
+			err = currentFlags.WriteOutput(messageTools)
+			return
+		}
+	}
+
+	// Handle Spotify podcast/episode metadata
+	if currentFlags.Spotify != "" {
+		if !registry.Spotify.IsConfigured() {
+			err = errors.New(i18n.T("spotify_not_configured"))
+			return
+		}
+
+		var metadata any
+		if metadata, err = registry.Spotify.GrabMetadataForURL(currentFlags.Spotify); err != nil {
+			return
+		}
+
+		formattedMetadata := registry.Spotify.FormatMetadataAsText(metadata)
+		messageTools = AppendMessage(messageTools, formattedMetadata)
 
 		if !currentFlags.IsChatRequest() {
 			err = currentFlags.WriteOutput(messageTools)

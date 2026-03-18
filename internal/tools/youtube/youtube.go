@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -86,7 +87,7 @@ type YouTube struct {
 func (o *YouTube) initService() (err error) {
 	if o.service == nil {
 		if o.ApiKey.Value == "" {
-			err = fmt.Errorf("%s", i18n.T("youtube_api_key_required"))
+			err = errors.New(i18n.T("youtube_api_key_required"))
 			return
 		}
 		o.normalizeRegex = regexp.MustCompile(`[^a-zA-Z0-9]+`)
@@ -124,10 +125,10 @@ func (o *YouTube) extractAndValidateVideoId(url string) (videoId string, err err
 		return "", err
 	}
 	if videoId == "" && playlistId != "" {
-		return "", fmt.Errorf("%s", i18n.T("youtube_url_is_playlist_not_video"))
+		return "", errors.New(i18n.T("youtube_url_is_playlist_not_video"))
 	}
 	if videoId == "" {
-		return "", fmt.Errorf("%s", i18n.T("youtube_no_video_id_found"))
+		return "", errors.New(i18n.T("youtube_no_video_id_found"))
 	}
 	return videoId, nil
 }
@@ -192,7 +193,7 @@ func detectError(ytOutput io.Reader) error {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("%s", i18n.T("youtube_ytdlp_stderr_error"))
+		return errors.New(i18n.T("youtube_ytdlp_stderr_error"))
 	}
 	return nil
 }
@@ -218,7 +219,7 @@ func noLangs(args []string) []string {
 func (o *YouTube) tryMethodYtDlpInternal(videoId string, language string, additionalArgs string, processVTTFileFunc func(filename string) (string, error)) (ret string, err error) {
 	// Check if yt-dlp is available
 	if _, err = exec.LookPath("yt-dlp"); err != nil {
-		err = fmt.Errorf("%s", i18n.T("youtube_ytdlp_not_found"))
+		err = errors.New(i18n.T("youtube_ytdlp_not_found"))
 		return
 	}
 
@@ -328,7 +329,7 @@ func (o *YouTube) readAndCleanVTTFile(filename string) (ret string, err error) {
 
 	ret = strings.TrimSpace(textBuilder.String())
 	if ret == "" {
-		err = fmt.Errorf("%s", i18n.T("youtube_no_transcript_content"))
+		err = errors.New(i18n.T("youtube_no_transcript_content"))
 	}
 	return
 }
@@ -398,7 +399,7 @@ func (o *YouTube) readAndFormatVTTWithTimestamps(filename string) (ret string, e
 
 	ret = strings.TrimSpace(textBuilder.String())
 	if ret == "" {
-		err = fmt.Errorf("%s", i18n.T("youtube_no_transcript_content"))
+		err = errors.New(i18n.T("youtube_no_transcript_content"))
 	}
 	return
 }
@@ -476,7 +477,7 @@ func parseTimestampToSeconds(timestamp string) (int, error) {
 
 func parseSeconds(secondsStr string) (int, error) {
 	if secondsStr == "" {
-		return 0, fmt.Errorf("%s", i18n.T("youtube_empty_seconds_string"))
+		return 0, errors.New(i18n.T("youtube_empty_seconds_string"))
 	}
 
 	// Extract integer part (before decimal point if present)
@@ -506,7 +507,7 @@ func (o *YouTube) GrabComments(videoId string) (ret []string, err error) {
 	call := o.service.CommentThreads.List([]string{"snippet", "replies"}).VideoId(videoId).TextFormat("plainText").MaxResults(100)
 	var response *youtube.CommentThreadListResponse
 	if response, err = call.Do(); err != nil {
-		log.Printf("Failed to fetch comments: %v", err)
+		log.Printf(i18n.T("youtube_failed_fetch_comments"), err)
 		return
 	}
 
@@ -677,7 +678,7 @@ func (o *YouTube) FetchAndSavePlaylist(playlistID, filename string) (err error) 
 		return
 	}
 
-	fmt.Println("Playlist saved to", filename)
+	fmt.Printf("%s\n", fmt.Sprintf(i18n.T("youtube_playlist_saved_to"), filename))
 	return
 }
 
@@ -688,8 +689,8 @@ func (o *YouTube) FetchAndPrintPlaylist(playlistID string) (err error) {
 		return
 	}
 
-	fmt.Printf("Playlist: %s\n", playlistID)
-	fmt.Printf("VideoId: Title\n")
+	fmt.Printf("%s\n", fmt.Sprintf(i18n.T("youtube_playlist_header"), playlistID))
+	fmt.Printf("%s\n", i18n.T("youtube_video_id_title_header"))
 	for _, video := range videos {
 		fmt.Printf("%s: %s\n", video.Id, video.Title)
 	}
@@ -723,7 +724,7 @@ func (o *YouTube) findVTTFilesWithFallback(dir, requestedLanguage string) ([]str
 	}
 
 	if len(vttFiles) == 0 {
-		return nil, fmt.Errorf("%s", i18n.T("youtube_no_vtt_files_found"))
+		return nil, errors.New(i18n.T("youtube_no_vtt_files_found"))
 	}
 
 	// If no specific language requested, return the first file
@@ -831,7 +832,7 @@ func (o *YouTube) GrabByFlags() (ret *VideoInfo, err error) {
 	flag.Parse()
 
 	if flag.NArg() == 0 {
-		log.Fatal("Error: No URL provided.")
+		log.Fatalf("%s", i18n.T("youtube_no_url_provided"))
 	}
 
 	url := flag.Arg(0)

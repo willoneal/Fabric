@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/danielmiessler/fabric/internal/chat"
 	"github.com/danielmiessler/fabric/internal/domain"
+	"github.com/danielmiessler/fabric/internal/i18n"
 	debuglog "github.com/danielmiessler/fabric/internal/log"
 	"github.com/danielmiessler/fabric/internal/plugins"
 	openai "github.com/openai/openai-go"
@@ -52,11 +54,7 @@ func NewClientCompatibleNoSetupQuestions(vendorName string, configureCustom func
 		configureCustom = ret.configure
 	}
 
-	ret.PluginBase = &plugins.PluginBase{
-		Name:            vendorName,
-		EnvNamePrefix:   plugins.BuildEnvVariablePrefix(vendorName),
-		ConfigureCustom: configureCustom,
-	}
+	ret.PluginBase = plugins.NewVendorPluginBase(vendorName, configureCustom)
 
 	return
 }
@@ -73,6 +71,14 @@ type Client struct {
 // SetResponsesAPIEnabled configures whether to use the Responses API
 func (o *Client) SetResponsesAPIEnabled(enabled bool) {
 	o.ImplementsResponses = enabled
+}
+
+// checkImageGenerationCompatibility warns if the model doesn't support image generation
+func checkImageGenerationCompatibility(model string) {
+	if !supportsImageGeneration(model) {
+		fmt.Fprintf(os.Stderr, "%s", fmt.Sprintf(i18n.T("openai_warning_model_no_image_generation"),
+			model, strings.Join(ImageGenerationSupportedModels, ", ")))
+	}
 }
 
 func (o *Client) configure() (ret error) {
@@ -108,7 +114,7 @@ func (o *Client) ListModels() (ret []string, err error) {
 }
 
 func (o *Client) SendStream(
-	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan string,
+	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan domain.StreamUpdate,
 ) (err error) {
 	// Use Responses API for OpenAI, Chat Completions API for other providers
 	if o.supportsResponsesAPI() {
@@ -118,7 +124,7 @@ func (o *Client) SendStream(
 }
 
 func (o *Client) sendStreamResponses(
-	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan string,
+	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan domain.StreamUpdate,
 ) (err error) {
 	defer close(channel)
 
@@ -128,7 +134,10 @@ func (o *Client) sendStreamResponses(
 		event := stream.Current()
 		switch event.Type {
 		case string(constant.ResponseOutputTextDelta("").Default()):
-			channel <- event.AsResponseOutputTextDelta().Delta
+			channel <- domain.StreamUpdate{
+				Type:    domain.StreamTypeContent,
+				Content: event.AsResponseOutputTextDelta().Delta,
+			}
 		case string(constant.ResponseOutputTextDone("").Default()):
 			// The Responses API sends the full text again in the
 			// final "done" event. Since we've already streamed all
@@ -138,7 +147,10 @@ func (o *Client) sendStreamResponses(
 		}
 	}
 	if stream.Err() == nil {
-		channel <- "\n"
+		channel <- domain.StreamUpdate{
+			Type:    domain.StreamTypeContent,
+			Content: "\n",
+		}
 	}
 	return stream.Err()
 }
@@ -152,9 +164,14 @@ func (o *Client) Send(ctx context.Context, msgs []*chat.ChatCompletionMessage, o
 }
 
 func (o *Client) sendResponses(ctx context.Context, msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions) (ret string, err error) {
+	// Warn if model doesn't support image generation when image file is specified
+	if opts.ImageFile != "" {
+		checkImageGenerationCompatibility(opts.Model)
+	}
+
 	// Validate model supports image generation if image file is specified
 	if opts.ImageFile != "" && !supportsImageGeneration(opts.Model) {
-		return "", fmt.Errorf("model '%s' does not support image generation. Supported models: %s", opts.Model, strings.Join(ImageGenerationSupportedModels, ", "))
+		return "", fmt.Errorf("%s", fmt.Sprintf(i18n.T("openai_model_no_image_generation"), opts.Model, strings.Join(ImageGenerationSupportedModels, ", ")))
 	}
 
 	req := o.buildResponseParams(msgs, opts)
@@ -289,6 +306,14 @@ func (o *Client) buildResponseParams(
 	return
 }
 
+// BuildResponseParams exposes the shared Responses API request builder so
+// auth-specialized vendors can reuse Fabric's OpenAI-compatible request shape.
+func (o *Client) BuildResponseParams(
+	inputMsgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions,
+) responses.ResponseNewParams {
+	return o.buildResponseParams(inputMsgs, opts)
+}
+
 func convertMessage(msg chat.ChatCompletionMessage) responses.ResponseInputItemUnionParam {
 	result := convertMessageCommon(msg)
 	role := responses.EasyInputMessageRole(result.Role)
@@ -351,4 +376,10 @@ func (o *Client) extractText(resp *responses.Response) (ret string) {
 	}
 
 	return
+}
+
+// ExtractText exposes the shared Responses API text extraction logic so other
+// vendors can reuse Fabric's response formatting and citation handling.
+func (o *Client) ExtractText(resp *responses.Response) string {
+	return o.extractText(resp)
 }

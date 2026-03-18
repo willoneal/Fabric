@@ -3,8 +3,9 @@ package anthropic
 import (
 	"context"
 	"fmt"
-	"net/http"
+	neturl "net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/danielmiessler/fabric/internal/chat"
 	"github.com/danielmiessler/fabric/internal/domain"
+	"github.com/danielmiessler/fabric/internal/i18n"
 	debuglog "github.com/danielmiessler/fabric/internal/log"
 	"github.com/danielmiessler/fabric/internal/plugins"
-	"github.com/danielmiessler/fabric/internal/util"
 )
 
 const defaultBaseUrl = "https://api.anthropic.com/"
@@ -23,75 +24,69 @@ const webSearchToolName = "web_search"
 const webSearchToolType = "web_search_20250305"
 const sourcesHeader = "## Sources"
 
-const authTokenIdentifier = "claude"
-
 func NewClient() (ret *Client) {
 	vendorName := "Anthropic"
 	ret = &Client{}
 
-	ret.PluginBase = &plugins.PluginBase{
-		Name:            vendorName,
-		EnvNamePrefix:   plugins.BuildEnvVariablePrefix(vendorName),
-		ConfigureCustom: ret.configure,
-	}
+	ret.PluginBase = plugins.NewVendorPluginBase(vendorName, ret.configure)
 
 	ret.ApiBaseURL = ret.AddSetupQuestion("API Base URL", false)
 	ret.ApiBaseURL.Value = defaultBaseUrl
-	ret.UseOAuth = ret.AddSetupQuestionBool("Use OAuth login", false)
 	ret.ApiKey = ret.PluginBase.AddSetupQuestion("API key", false)
 
 	ret.maxTokens = 4096
 	ret.defaultRequiredUserMessage = "Hi"
 	ret.models = []string{
-		string(anthropic.ModelClaude3_7SonnetLatest), string(anthropic.ModelClaude3_7Sonnet20250219),
-		string(anthropic.ModelClaude3_5HaikuLatest), string(anthropic.ModelClaude3_5Haiku20241022),
-		string(anthropic.ModelClaude3OpusLatest), string(anthropic.ModelClaude_3_Opus_20240229),
-		string(anthropic.ModelClaude_3_Haiku_20240307),
-		string(anthropic.ModelClaudeOpus4_20250514), string(anthropic.ModelClaudeSonnet4_20250514),
-		string(anthropic.ModelClaudeOpus4_1_20250805),
-		string(anthropic.ModelClaudeSonnet4_5),
-		string(anthropic.ModelClaudeSonnet4_5_20250929),
+		// The following are the current supported models
+		string(anthropic.ModelClaudeSonnet4_6),
+		string(anthropic.ModelClaudeOpus4_6),
 		string(anthropic.ModelClaudeOpus4_5_20251101),
 		string(anthropic.ModelClaudeOpus4_5),
 		string(anthropic.ModelClaudeHaiku4_5),
 		string(anthropic.ModelClaudeHaiku4_5_20251001),
+		string(anthropic.ModelClaudeSonnet4_20250514),
+		string(anthropic.ModelClaudeSonnet4_0),
+		string(anthropic.ModelClaude4Sonnet20250514),
+		string(anthropic.ModelClaudeSonnet4_5),
+		string(anthropic.ModelClaudeSonnet4_5_20250929),
+		string(anthropic.ModelClaudeOpus4_0),
+		string(anthropic.ModelClaudeOpus4_20250514),
+		string(anthropic.ModelClaude4Opus20250514),
+		string(anthropic.ModelClaudeOpus4_1_20250805),
 	}
 
 	ret.modelBetas = map[string][]string{
-		string(anthropic.ModelClaudeSonnet4_20250514):   {"context-1m-2025-08-07"},
+		// See https://platform.claude.com/docs/en/build-with-claude/context-windows#1-m-token-context-window
+		// Claude Opus 4.6, Sonnet 4.6, Sonnet 4.5, and Sonnet 4 support a 1-million token context window.
+
+		// This list can change over time as Anthropic updates their models and beta features, so we maintain it separately from the main model list
+		// for easier updates.
+
+		// Claude Sonnet 4 variants (1M context support)
+		string(anthropic.ModelClaudeSonnet4_20250514): {"context-1m-2025-08-07"},
+		string(anthropic.ModelClaudeSonnet4_0):        {"context-1m-2025-08-07"},
+		string(anthropic.ModelClaude4Sonnet20250514):  {"context-1m-2025-08-07"},
+
+		// Claude Sonnet 4.5 variants (1M context support)
 		string(anthropic.ModelClaudeSonnet4_5):          {"context-1m-2025-08-07"},
 		string(anthropic.ModelClaudeSonnet4_5_20250929): {"context-1m-2025-08-07"},
+
+		// Claude Sonnet 4.6 (1M context support)
+		string(anthropic.ModelClaudeSonnet4_6): {"context-1m-2025-08-07"},
+
+		// Claude Opus 4.5 and 4.6 variants (1M context support)
+		string(anthropic.ModelClaudeOpus4_5):          {"context-1m-2025-08-07"},
+		string(anthropic.ModelClaudeOpus4_6):          {"context-1m-2025-08-07"},
+		string(anthropic.ModelClaudeOpus4_5_20251101): {"context-1m-2025-08-07"},
 	}
 
 	return
 }
 
-// IsConfigured returns true if either the API key or OAuth is configured
+// IsConfigured returns true if the API key is configured
 func (an *Client) IsConfigured() bool {
 	// Check if API key is configured
 	if an.ApiKey.Value != "" {
-		return true
-	}
-
-	// Check if OAuth is enabled and has a valid token
-	if plugins.ParseBoolElseFalse(an.UseOAuth.Value) {
-		storage, err := util.NewOAuthStorage()
-		if err != nil {
-			return false
-		}
-
-		// If no valid token exists, automatically run OAuth flow
-		if !storage.HasValidToken(authTokenIdentifier, 5) {
-			fmt.Println("OAuth enabled but no valid token found. Starting authentication...")
-			_, err := RunOAuthFlow(authTokenIdentifier)
-			if err != nil {
-				fmt.Printf("OAuth authentication failed: %v\n", err)
-				return false
-			}
-			// After successful OAuth flow, check again
-			return storage.HasValidToken(authTokenIdentifier, 5)
-		}
-
 		return true
 	}
 
@@ -102,7 +97,6 @@ type Client struct {
 	*plugins.PluginBase
 	ApiBaseURL *plugins.SetupQuestion
 	ApiKey     *plugins.SetupQuestion
-	UseOAuth   *plugins.SetupQuestion
 
 	maxTokens                  int
 	defaultRequiredUserMessage string
@@ -117,21 +111,6 @@ func (an *Client) Setup() (err error) {
 		return
 	}
 
-	if plugins.ParseBoolElseFalse(an.UseOAuth.Value) {
-		// Check if we have a valid stored token
-		storage, err := util.NewOAuthStorage()
-		if err != nil {
-			return err
-		}
-
-		if !storage.HasValidToken(authTokenIdentifier, 5) {
-			// No valid token, run OAuth flow
-			if _, err = RunOAuthFlow(authTokenIdentifier); err != nil {
-				return err
-			}
-		}
-	}
-
 	err = an.configure()
 	return
 }
@@ -143,17 +122,7 @@ func (an *Client) configure() (err error) {
 		opts = append(opts, option.WithBaseURL(an.ApiBaseURL.Value))
 	}
 
-	if plugins.ParseBoolElseFalse(an.UseOAuth.Value) {
-		// For OAuth, use Bearer token with custom headers
-		// Create custom HTTP client that adds OAuth Bearer token and beta header
-		baseTransport := &http.Transport{}
-		httpClient := &http.Client{
-			Transport: NewOAuthTransport(an, baseTransport),
-		}
-		opts = append(opts, option.WithHTTPClient(httpClient))
-	} else {
-		opts = append(opts, option.WithAPIKey(an.ApiKey.Value))
-	}
+	opts = append(opts, option.WithAPIKey(an.ApiKey.Value))
 
 	an.client = anthropic.NewClient(opts...)
 	return
@@ -184,7 +153,7 @@ func parseThinking(level domain.ThinkingLevel) (anthropic.ThinkingConfigParamUni
 }
 
 func (an *Client) SendStream(
-	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan string,
+	msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan domain.StreamUpdate,
 ) (err error) {
 	messages := an.toMessages(msgs)
 	if len(messages) == 0 {
@@ -210,14 +179,38 @@ func (an *Client) SendStream(
 	for stream.Next() {
 		event := stream.Current()
 
-		// directly send any non-empty delta text
+		// Handle Content
 		if event.Delta.Text != "" {
-			channel <- event.Delta.Text
+			channel <- domain.StreamUpdate{
+				Type:    domain.StreamTypeContent,
+				Content: event.Delta.Text,
+			}
+		}
+
+		// Handle Usage
+		if event.Message.Usage.InputTokens != 0 || event.Message.Usage.OutputTokens != 0 {
+			channel <- domain.StreamUpdate{
+				Type: domain.StreamTypeUsage,
+				Usage: &domain.UsageMetadata{
+					InputTokens:  int(event.Message.Usage.InputTokens),
+					OutputTokens: int(event.Message.Usage.OutputTokens),
+					TotalTokens:  int(event.Message.Usage.InputTokens + event.Message.Usage.OutputTokens),
+				},
+			}
+		} else if event.Usage.InputTokens != 0 || event.Usage.OutputTokens != 0 {
+			channel <- domain.StreamUpdate{
+				Type: domain.StreamTypeUsage,
+				Usage: &domain.UsageMetadata{
+					InputTokens:  int(event.Usage.InputTokens),
+					OutputTokens: int(event.Usage.OutputTokens),
+					TotalTokens:  int(event.Usage.InputTokens + event.Usage.OutputTokens),
+				},
+			}
 		}
 	}
 
 	if stream.Err() != nil {
-		fmt.Fprintf(os.Stderr, "Messages stream error: %v\n", stream.Err())
+		fmt.Fprintf(os.Stderr, i18n.T("anthropic_stream_error"), stream.Err())
 	}
 	close(channel)
 	return
@@ -240,17 +233,6 @@ func (an *Client) buildMessageParams(msgs []anthropic.MessageParam, opts *domain
 	} else {
 		// Use temperature (always set to ensure Fabric's default of 0.7, not Anthropic's 1.0)
 		params.Temperature = anthropic.Opt(opts.Temperature)
-	}
-
-	// Add Claude Code spoofing system message for OAuth authentication
-	if plugins.ParseBoolElseFalse(an.UseOAuth.Value) {
-		params.System = []anthropic.TextBlockParam{
-			{
-				Type: "text",
-				Text: "You are Claude Code, Anthropic's official CLI for Claude.",
-			},
-		}
-
 	}
 
 	if opts.Search {
@@ -361,22 +343,29 @@ func (an *Client) toMessages(msgs []*chat.ChatCompletionMessage) (ret []anthropi
 	lastRoleWasUser := false
 
 	for _, msg := range msgs {
-		if strings.TrimSpace(msg.Content) == "" {
+		if strings.TrimSpace(msg.Content) == "" && len(msg.MultiContent) == 0 {
 			continue // Skip empty messages
 		}
 
 		switch msg.Role {
 		case chat.ChatMessageRoleSystem:
 			// Accumulate system content. It will be prepended to the first user message.
+			systemText := messageTextFromParts(msg)
+			if systemText == "" {
+				continue
+			}
 			if systemContent != "" {
-				systemContent += "\\n" + msg.Content
+				systemContent += "\n" + systemText
 			} else {
-				systemContent = msg.Content
+				systemContent = systemText
 			}
 		case chat.ChatMessageRoleUser:
-			userContent := msg.Content
+			blocks := contentBlocksFromMessage(msg)
+			if len(blocks) == 0 {
+				continue
+			}
 			if isFirstUserMessage && systemContent != "" {
-				userContent = systemContent + "\\n\\n" + userContent
+				blocks = prependSystemContentToBlocks(systemContent, blocks)
 				isFirstUserMessage = false // System content now consumed
 			}
 			if lastRoleWasUser {
@@ -384,7 +373,7 @@ func (an *Client) toMessages(msgs []*chat.ChatCompletionMessage) (ret []anthropi
 				// This shouldn't happen with current chatter.go logic but is a safeguard.
 				anthropicMessages = append(anthropicMessages, anthropic.NewAssistantMessage(anthropic.NewTextBlock("Okay.")))
 			}
-			anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(anthropic.NewTextBlock(userContent)))
+			anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(blocks...))
 			lastRoleWasUser = true
 		case chat.ChatMessageRoleAssistant:
 			// If the first message is an assistant message, and we have system content,
@@ -415,6 +404,147 @@ func (an *Client) toMessages(msgs []*chat.ChatCompletionMessage) (ret []anthropi
 	return anthropicMessages
 }
 
-func (an *Client) NeedsRawMode(modelName string) bool {
-	return false
+// messageTextFromParts extracts and concatenates all text content from a message,
+// combining both the Content field and any text parts in MultiContent.
+func messageTextFromParts(msg *chat.ChatCompletionMessage) string {
+	textParts := []string{}
+	if strings.TrimSpace(msg.Content) != "" {
+		textParts = append(textParts, msg.Content)
+	}
+	for _, part := range msg.MultiContent {
+		if part.Type == chat.ChatMessagePartTypeText && strings.TrimSpace(part.Text) != "" {
+			textParts = append(textParts, part.Text)
+		}
+	}
+	return strings.Join(textParts, "\n")
+}
+
+// contentBlocksFromMessage converts a chat message into Anthropic content blocks,
+// handling text content, image URLs (both data URLs and remote URLs), and PDF attachments.
+func contentBlocksFromMessage(msg *chat.ChatCompletionMessage) []anthropic.ContentBlockParamUnion {
+	var blocks []anthropic.ContentBlockParamUnion
+	if strings.TrimSpace(msg.Content) != "" {
+		blocks = append(blocks, anthropic.NewTextBlock(msg.Content))
+	}
+	for _, part := range msg.MultiContent {
+		switch part.Type {
+		case chat.ChatMessagePartTypeText:
+			if strings.TrimSpace(part.Text) != "" {
+				blocks = append(blocks, anthropic.NewTextBlock(part.Text))
+			}
+		case chat.ChatMessagePartTypeImageURL:
+			if part.ImageURL == nil || strings.TrimSpace(part.ImageURL.URL) == "" {
+				continue
+			}
+			if block, ok := contentBlockFromAttachmentURL(part.ImageURL.URL); ok {
+				blocks = append(blocks, block)
+			}
+		}
+	}
+	return blocks
+}
+
+// prependSystemContentToBlocks prepends system content to content blocks. If the first
+// block is text, it merges the system content with it; otherwise, it prepends a new text block.
+func prependSystemContentToBlocks(systemContent string, blocks []anthropic.ContentBlockParamUnion) []anthropic.ContentBlockParamUnion {
+	if len(blocks) == 0 {
+		return []anthropic.ContentBlockParamUnion{anthropic.NewTextBlock(systemContent)}
+	}
+	if blocks[0].OfText != nil {
+		blocks[0].OfText.Text = systemContent + "\n\n" + blocks[0].OfText.Text
+		return blocks
+	}
+	return append([]anthropic.ContentBlockParamUnion{anthropic.NewTextBlock(systemContent)}, blocks...)
+}
+
+// contentBlockFromAttachmentURL converts an attachment URL into an Anthropic content block.
+// For data URLs, it parses the MIME type and base64 data to create image or PDF blocks.
+// For remote URLs, it creates URL-based image blocks, or PDF document blocks if the URL ends in .pdf.
+// Returns the content block and true on success, or an empty block and false if unsupported.
+func contentBlockFromAttachmentURL(url string) (anthropic.ContentBlockParamUnion, bool) {
+	if strings.HasPrefix(url, "data:") {
+		mimeType, data, ok := parseDataURL(url)
+		if !ok {
+			debuglog.Debug(debuglog.Basic, "contentBlockFromAttachmentURL: failed to parse data URL")
+			return anthropic.ContentBlockParamUnion{}, false
+		}
+		if strings.EqualFold(mimeType, "application/pdf") {
+			return anthropic.NewDocumentBlock(anthropic.Base64PDFSourceParam{Data: data}), true
+		}
+		if normalized := normalizeImageMimeType(mimeType); normalized != "" {
+			return anthropic.NewImageBlockBase64(normalized, data), true
+		}
+		debuglog.Debug(debuglog.Basic, "contentBlockFromAttachmentURL: unsupported MIME type %s", mimeType)
+		return anthropic.ContentBlockParamUnion{}, false
+	}
+	if isPDFURL(url) {
+		return anthropic.NewDocumentBlock(anthropic.URLPDFSourceParam{URL: url}), true
+	}
+	return anthropic.NewImageBlock(anthropic.URLImageSourceParam{URL: url}), true
+}
+
+// parseDataURL parses an RFC 2397 data URL, extracting the MIME type and base64-encoded data.
+// Only base64-encoded data URLs are supported; URL-encoded data URLs will return ok=false.
+func parseDataURL(value string) (mimeType string, data string, ok bool) {
+	if !strings.HasPrefix(value, "data:") {
+		return "", "", false
+	}
+	withoutPrefix := strings.TrimPrefix(value, "data:")
+	parts := strings.SplitN(withoutPrefix, ",", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	meta := strings.TrimSpace(parts[0])
+	data = strings.TrimSpace(parts[1])
+	if data == "" {
+		return "", "", false
+	}
+	metaParts := strings.Split(meta, ";")
+	mimeType = strings.TrimSpace(metaParts[0])
+	if mimeType == "" {
+		return "", "", false
+	}
+	hasBase64 := false
+	for _, part := range metaParts[1:] {
+		if strings.EqualFold(strings.TrimSpace(part), "base64") {
+			hasBase64 = true
+			break
+		}
+	}
+	if !hasBase64 {
+		debuglog.Debug(debuglog.Basic, "parseDataURL: data URL without base64 encoding is not supported")
+		return "", "", false
+	}
+	return mimeType, data, true
+}
+
+// normalizeImageMimeType validates and normalizes image MIME types to those supported
+// by the Anthropic API. Supported formats: image/jpeg, image/png, image/gif, image/webp.
+// See: https://docs.anthropic.com/en/docs/build-with-claude/vision
+func normalizeImageMimeType(mimeType string) string {
+	switch strings.ToLower(strings.TrimSpace(mimeType)) {
+	case "image/jpg", "image/jpeg":
+		return "image/jpeg"
+	case "image/png":
+		return "image/png"
+	case "image/gif":
+		return "image/gif"
+	case "image/webp":
+		return "image/webp"
+	default:
+		return ""
+	}
+}
+
+// isPDFURL checks if a URL appears to point to a PDF based on its path extension.
+// NOTE: This only checks the URL path extension (.pdf) and will not detect PDFs served
+// from extension-less endpoints (e.g., /documents/12345) or based on Content-Type headers.
+// This is an intentional limitation; callers should not assume this guarantees the
+// remote resource is actually a PDF.
+func isPDFURL(url string) bool {
+	parsedURL, err := neturl.Parse(url)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(path.Ext(parsedURL.Path), ".pdf")
 }

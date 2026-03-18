@@ -30,6 +30,7 @@
 		"creatordate",
 		"curcontext",
 		"custompatterns",
+		"Daemonized",
 		"danielmiessler",
 		"davidanson",
 		"Debugf",
@@ -92,6 +93,7 @@
 		"horts",
 		"HTMLURL",
 		"imagetools",
+		"Infermatic",
 		"Jamba",
 		"jaredmontoya",
 		"jessevdk",
@@ -117,6 +119,7 @@
 		"listvendors",
 		"lmstudio",
 		"Makefiles",
+		"Mammouth",
 		"markmap",
 		"matplotlib",
 		"mattn",
@@ -126,11 +129,16 @@
 		"Miessler",
 		"modeline",
 		"modelines",
+		"Moltbot",
 		"mpga",
 		"mvdan",
+		"mychat",
+		"mygroup",
+		"neturl",
 		"nicksnyder",
 		"nixpkgs",
 		"nometa",
+		"Novita",
 		"numpy",
 		"ollama",
 		"ollamaapi",
@@ -144,6 +152,7 @@
 		"osascript",
 		"otiai",
 		"pdflatex",
+		"PDFURL",
 		"pipx",
 		"PKCE",
 		"pkgs",
@@ -157,12 +166,14 @@
 		"pyperclip",
 		"qwen",
 		"readystream",
+		"reflexion",
 		"restapi",
 		"rmextension",
 		"Sadachbia",
 		"Sadaltager",
 		"samber",
 		"sashabaranov",
+		"schtasks",
 		"sdist",
 		"seaborn",
 		"semgrep",
@@ -190,6 +201,7 @@
 		"unconfigured",
 		"unmarshalling",
 		"updatepatterns",
+		"URLPDF",
 		"useb",
 		"USERPROFILE",
 		"varnames",
@@ -247,5 +259,11 @@
 			]
 		},
 		"MD041": false
+	},
+	"[json]": {
+		"editor.formatOnSave": false
+	},
+	"gopls": {
+		"build.buildFlags": ["-tags=integration"]
 	}
 }

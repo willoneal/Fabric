@@ -1,22 +1,25 @@
 package azure
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
+	"github.com/danielmiessler/fabric/internal/i18n"
 	"github.com/danielmiessler/fabric/internal/plugins"
+	"github.com/danielmiessler/fabric/internal/plugins/ai/azurecommon"
 	"github.com/danielmiessler/fabric/internal/plugins/ai/openai"
 	openaiapi "github.com/openai/openai-go"
 	"github.com/openai/openai-go/azure"
+	"github.com/openai/openai-go/option"
 )
 
 func NewClient() (ret *Client) {
 	ret = &Client{}
 	ret.Client = openai.NewClientCompatible("Azure", "", ret.configure)
 	ret.ApiDeployments = ret.AddSetupQuestionCustom("deployments", true,
-		"Enter your Azure deployments (comma separated)")
+		i18n.T("azure_deployments_question"))
 	ret.ApiVersion = ret.AddSetupQuestionCustom("API Version", false,
-		"Enter the Azure API version (optional)")
+		i18n.T("azure_api_version_question"))
 
 	return
 }
@@ -29,51 +32,41 @@ type Client struct {
 	apiDeployments []string
 }
 
-const defaultAPIVersion = "2024-05-01-preview"
-
 func (oi *Client) configure() error {
-	oi.apiDeployments = parseDeployments(oi.ApiDeployments.Value)
+	oi.apiDeployments = azurecommon.ParseDeployments(oi.ApiDeployments.Value)
+	if len(oi.apiDeployments) == 0 {
+		return errors.New(i18n.T("azure_deployments_required"))
+	}
 
 	apiKey := strings.TrimSpace(oi.ApiKey.Value)
 	if apiKey == "" {
-		return fmt.Errorf("Azure API key is required")
+		return errors.New(i18n.T("azure_api_key_required"))
 	}
 
 	baseURL := strings.TrimSpace(oi.ApiBaseURL.Value)
 	if baseURL == "" {
-		return fmt.Errorf("Azure API base URL is required")
+		return errors.New(i18n.T("azure_base_url_required"))
 	}
 
 	apiVersion := strings.TrimSpace(oi.ApiVersion.Value)
 	if apiVersion == "" {
-		apiVersion = defaultAPIVersion
+		apiVersion = azurecommon.DefaultAPIVersion
 		oi.ApiVersion.Value = apiVersion
 	}
 
+	endpoint := azurecommon.BuildEndpoint(baseURL)
+
 	client := openaiapi.NewClient(
 		azure.WithAPIKey(apiKey),
-		azure.WithEndpoint(baseURL, apiVersion),
+		option.WithBaseURL(endpoint),
+		option.WithQueryAdd("api-version", apiVersion),
+		option.WithMiddleware(azurecommon.AzureDeploymentMiddleware),
 	)
 	oi.ApiClient = &client
 	return nil
 }
 
-func parseDeployments(value string) []string {
-	parts := strings.Split(value, ",")
-	var deployments []string
-	for _, part := range parts {
-		if deployment := strings.TrimSpace(part); deployment != "" {
-			deployments = append(deployments, deployment)
-		}
-	}
-	return deployments
-}
-
 func (oi *Client) ListModels() (ret []string, err error) {
 	ret = oi.apiDeployments
 	return
-}
-
-func (oi *Client) NeedsRawMode(modelName string) bool {
-	return false
 }

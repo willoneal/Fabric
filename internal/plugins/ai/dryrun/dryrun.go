@@ -108,12 +108,30 @@ func (c *Client) constructRequest(msgs []*chat.ChatCompletionMessage, opts *doma
 	return builder.String()
 }
 
-func (c *Client) SendStream(msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan string) error {
+func (c *Client) SendStream(msgs []*chat.ChatCompletionMessage, opts *domain.ChatOptions, channel chan domain.StreamUpdate) error {
 	defer close(channel)
 	request := c.constructRequest(msgs, opts)
-	channel <- request
-	channel <- "\n"
-	channel <- DryRunResponse
+	channel <- domain.StreamUpdate{
+		Type:    domain.StreamTypeContent,
+		Content: request,
+	}
+	channel <- domain.StreamUpdate{
+		Type:    domain.StreamTypeContent,
+		Content: "\n",
+	}
+	channel <- domain.StreamUpdate{
+		Type:    domain.StreamTypeContent,
+		Content: DryRunResponse,
+	}
+	// Simulated usage
+	channel <- domain.StreamUpdate{
+		Type: domain.StreamTypeUsage,
+		Usage: &domain.UsageMetadata{
+			InputTokens:  100,
+			OutputTokens: 50,
+			TotalTokens:  150,
+		},
+	}
 	return nil
 }
 
@@ -129,8 +147,4 @@ func (c *Client) Setup() error {
 
 func (c *Client) SetupFillEnvFileContent(_ *bytes.Buffer) {
 	// No environment variables needed for dry run
-}
-
-func (c *Client) NeedsRawMode(modelName string) bool {
-	return false
 }

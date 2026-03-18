@@ -36,6 +36,16 @@ func (o *PluginBase) GetName() string {
 	return o.Name
 }
 
+// NewVendorPluginBase creates a standardized PluginBase for AI vendor plugins.
+// This centralizes the common initialization pattern used by all vendors.
+func NewVendorPluginBase(name string, configure func() error) *PluginBase {
+	return &PluginBase{
+		Name:            name,
+		EnvNamePrefix:   BuildEnvVariablePrefix(name),
+		ConfigureCustom: configure,
+	}
+}
+
 func (o *PluginBase) GetSetupDescription() (ret string) {
 	if ret = o.SetupDescription; ret == "" {
 		ret = o.GetName()
@@ -121,6 +131,12 @@ func (o *PluginBase) SetupOrSkip() (err error) {
 
 func (o *PluginBase) SetupFillEnvFileContent(fileEnvFileContent *bytes.Buffer) {
 	o.Settings.FillEnvFileContent(fileEnvFileContent)
+}
+
+// NeedsRawMode returns false by default. Vendors that need raw mode
+// (e.g., perplexity, ollama, openai for certain models) override this method.
+func (o *PluginBase) NeedsRawMode(modelName string) bool {
+	return false
 }
 
 func NewSetting(envVariable string, required bool) *Setting {

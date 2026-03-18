@@ -2,12 +2,18 @@ package openai_compatible
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/danielmiessler/fabric/internal/i18n"
 	"github.com/danielmiessler/fabric/internal/plugins/ai/openai"
 )
+
+const abacusRouteLLMModelsURL = "https://routellm.abacus.ai/api/v0/_listRouteLLMModels"
 
 // ProviderConfig defines the configuration for an OpenAI-compatible API provider
 type ProviderConfig struct {
@@ -41,6 +47,14 @@ func NewClient(providerConfig ProviderConfig) *Client {
 func (c *Client) ListModels() ([]string, error) {
 	// If a custom models URL is provided, handle it
 	if c.modelsURL != "" {
+		if c.modelsURL == "static:abacus" {
+			models, err := c.fetchAbacusModels()
+			if err == nil && len(models) > 0 {
+				return models, nil
+			}
+			return c.getStaticModels(c.modelsURL)
+		}
+
 		// Check for static model list
 		if strings.HasPrefix(c.modelsURL, "static:") {
 			return c.getStaticModels(c.modelsURL)
@@ -58,6 +72,57 @@ func (c *Client) ListModels() ([]string, error) {
 
 	// Fall back to direct API fetch
 	return c.DirectlyGetModels(context.Background())
+}
+
+func (c *Client) fetchAbacusModels() ([]string, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, abacusRouteLLMModelsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	if c.Client.ApiKey.Value != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Client.ApiKey.Value))
+	}
+
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(i18n.T("abacus_models_endpoint_status"), resp.StatusCode)
+	}
+
+	var response struct {
+		Result []struct {
+			Name string `json:"name"`
+		} `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, err
+	}
+
+	models := make([]string, 0, len(response.Result))
+	for _, item := range response.Result {
+		if item.Name != "" {
+			models = append(models, item.Name)
+		}
+	}
+
+	return models, nil
+}
+
+// NeedsRawMode overrides the parent implementation to handle provider-specific raw mode requirements
+func (c *Client) NeedsRawMode(modelName string) bool {
+	// MiniMax models require raw mode for proper message formatting
+	if c.GetName() == "MiniMax" {
+		return true
+	}
+	// Fall back to parent OpenAI client implementation for other providers
+	return c.Client.NeedsRawMode(modelName)
 }
 
 // getStaticModels returns a predefined list of models for providers that don't support model discovery
@@ -78,16 +143,22 @@ func (c *Client) getStaticModels(modelsKey string) ([]string, error) {
 			"gpt-5",
 			"gpt-5-mini",
 			"gpt-5-nano",
+			"gpt-5-codex",
 			"gpt-5.1",
+			"gpt-5.1-codex",
+			"gpt-5.1-codex-max",
 			"gpt-5.1-chat-latest",
+			"gpt-5.2",
+			"gpt-5.2-chat-latest",
+			"gpt-5.2-codex",
 			"openai/gpt-oss-120b",
-			"claude-3-7-sonnet-20250219",
 			"claude-sonnet-4-20250514",
 			"claude-opus-4-20250514",
 			"claude-opus-4-1-20250805",
 			"claude-sonnet-4-5-20250929",
 			"claude-haiku-4-5-20251001",
 			"claude-opus-4-5-20251101",
+			"claude-opus-4-6",
 			"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
 			"meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
 			"meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -98,27 +169,40 @@ func (c *Client) getStaticModels(modelsKey string) ([]string, error) {
 			"gemini-2.5-pro",
 			"gemini-2.5-flash",
 			"gemini-3-pro-preview",
+			"gemini-3-flash-preview",
 			"qwen-2.5-coder-32b",
 			"Qwen/Qwen2.5-72B-Instruct",
 			"Qwen/QwQ-32B",
 			"Qwen/Qwen3-235B-A22B-Instruct-2507",
 			"Qwen/Qwen3-32B",
 			"qwen/qwen3-coder-480b-a35b-instruct",
-			"qwen/qwen3-Max",
+			"qwen3-max",
 			"grok-4-0709",
 			"grok-4-fast-non-reasoning",
 			"grok-4-1-fast-non-reasoning",
 			"grok-code-fast-1",
 			"kimi-k2-turbo-preview",
+			"kimi-k2.5",
 			"deepseek/deepseek-v3.1",
 			"deepseek-ai/DeepSeek-V3.1-Terminus",
 			"deepseek-ai/DeepSeek-R1",
 			"deepseek-ai/DeepSeek-V3.2",
 			"zai-org/glm-4.5",
 			"zai-org/glm-4.6",
+			"zai-org/glm-4.7",
+			"zai-org/glm-5",
+		}, nil
+	case "static:minimax":
+		return []string{
+			"MiniMax-M2.5",
+			"MiniMax-M2.5-highspeed",
+			"MiniMax-M2.5-lightning",
+			"MiniMax-M2",
+			"MiniMax-M2.1",
+			"MiniMax-M2.1-lightning",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unknown static model list: %s", modelsKey)
+		return nil, fmt.Errorf(i18n.T("openai_compatible_unknown_static_model_list"), modelsKey)
 	}
 }
 
@@ -145,10 +229,15 @@ var ProviderMap = map[string]ProviderConfig{
 		ModelsURL:           "https://models.github.ai/catalog", // FetchModelsDirectly will append /models
 		ImplementsResponses: false,
 	},
+	"Infermatic": {
+		Name:                "Infermatic",
+		BaseURL:             "https://api.totalgpt.ai/v1",
+		ImplementsResponses: false,
+	},
 	"GrokAI": {
 		Name:                "GrokAI",
 		BaseURL:             "https://api.x.ai/v1",
-		ImplementsResponses: false,
+		ImplementsResponses: true,
 	},
 	"Groq": {
 		Name:                "Groq",
@@ -167,12 +256,18 @@ var ProviderMap = map[string]ProviderConfig{
 	},
 	"MiniMax": {
 		Name:                "MiniMax",
-		BaseURL:             "https://api.minimaxi.com/v1",
+		BaseURL:             "https://api.minimax.io/v1",
+		ModelsURL:           "static:minimax",
 		ImplementsResponses: false,
 	},
 	"Mistral": {
 		Name:                "Mistral",
 		BaseURL:             "https://api.mistral.ai/v1",
+		ImplementsResponses: false,
+	},
+	"Novita AI": {
+		Name:                "Novita AI",
+		BaseURL:             "https://api.novita.ai/openai/v1",
 		ImplementsResponses: false,
 	},
 	"OpenRouter": {
@@ -204,6 +299,11 @@ var ProviderMap = map[string]ProviderConfig{
 		Name:                "Abacus",
 		BaseURL:             "https://routellm.abacus.ai/v1/",
 		ModelsURL:           "static:abacus", // Special marker for static model list
+		ImplementsResponses: false,
+	},
+	"Mammouth": {
+		Name:                "Mammouth",
+		BaseURL:             "https://api.mammouth.ai/v1",
 		ImplementsResponses: false,
 	},
 }

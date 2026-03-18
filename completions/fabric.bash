@@ -83,7 +83,7 @@ _fabric() {
     return 0
     ;;
   --debug)
-    COMPREPLY=($(compgen -W "0 1 2 3" -- "${cur}"))
+    COMPREPLY=($(compgen -W "0 1 2 3 4" -- "${cur}"))
     return 0
     ;;
   # Options requiring file/directory paths
@@ -107,6 +107,9 @@ _fabric() {
   # Options requiring simple arguments (no specific completion logic here)
   -v | --variable | -t | --temperature | -T | --topp | -P | --presencepenalty | -F | --frequencypenalty | --modelContextLength | -n | --latest | -y | --youtube | --yt-dlp-args | -g | --language | -u | --scrape_url | -q | --scrape_question | -e | --seed | --address | --api-key | --search-location | --image-compression | --think-start-tag | --think-end-tag | --notification-command)
     # No specific completion suggestions, user types the value
+    return 0
+    ;;
+  --spotify)
     return 0
     ;;
   esac
